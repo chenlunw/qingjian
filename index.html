@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>请柬</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: "PingFang SC", "Microsoft YaHei", "STZhongsong", serif;
+      background: linear-gradient(135deg, #ffd6e0 0%, #ffe8ec 40%, #fff0f0 100%);
+      position: fixed;
+      top: 0; left: 0;
+    }
+
+    /* 飘落爱心 */
+    .heart {
+      position: absolute;
+      bottom: -60px;
+      color: rgba(255, 120, 150, 0.5);
+      font-size: 20px;
+      animation: rise linear infinite;
+      user-select: none;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes rise {
+      0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translateY(-110vh) rotate(360deg) scale(1.1); opacity: 0; }
+    }
+
+    /* ===== 竖屏时旋转提示遮罩 ===== */
+    .rotate-hint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      background: linear-gradient(135deg, #ffd6e0, #fff0f0);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      text-align: center;
+      color: #d6517c;
+    }
+    .rotate-icon {
+      width: 72px;
+      height: 72px;
+      border: 3px solid #d6517c;
+      border-radius: 14px;
+      animation: phoneRotate 2s ease-in-out infinite;
+      position: relative;
+    }
+    .rotate-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 26px; height: 8px;
+      background: #d6517c;
+      border-radius: 4px;
+      transform: translate(-50%, -50%);
+    }
+    @keyframes phoneRotate {
+      0%, 20% { transform: rotate(0deg); }
+      50%, 70% { transform: rotate(90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .rotate-hint p {
+      font-size: 20px;
+      letter-spacing: 2px;
+      font-weight: 600;
+      line-height: 1.8;
+    }
+
+    /* ===== 主舞台（横屏显示） ===== */
+    .app {
+      position: relative;
+      z-index: 2;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage {
+      position: relative;
+      perspective: 1000px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== 信封 ===== */
+    .envelope {
+      position: relative;
+      width: 400px;
+      height: 260px;
+      cursor: pointer;
+      transition: transform 0.4s ease;
+      filter: drop-shadow(0 22px 40px rgba(214, 81, 124, 0.35));
+    }
+    .envelope:hover { transform: translateY(-6px) scale(1.02); }
+
+    .envelope-body {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(120% 90% at 18% 8%, rgba(255, 255, 255, 0.4), transparent 55%),
+        linear-gradient(155deg, #f9a7bd 0%, #ef8aa6 45%, #e46d8f 100%);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.65),
+        inset 0 -3px 8px rgba(180, 60, 95, 0.35);
+      overflow: hidden;
+    }
+    /* 纸张细纹理 */
+    .envelope-body::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.03) 0 2px,
+        transparent 2px 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+    /* 底部 V 形折叠 */
+    .envelope-body::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0;
+      width: 0; height: 0;
+      border-left: 200px solid rgba(255, 255, 255, 0.28);
+      border-right: 200px solid rgba(255, 255, 255, 0.16);
+      border-bottom: 260px solid rgba(214, 81, 124, 0.12);
+    }
+
+    /* 收件人 */
+    .to-label {
+      position: absolute;
+      left: 50%; top: 66%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 3;
+      color: rgba(122, 59, 82, 0.85);
+    }
+    .to-name {
+      font-size: 20px;
+      letter-spacing: 4px;
+      font-weight: 600;
+      font-family: "STZhongsong", "STKaiti", "KaiTi", serif;
+    }
+    .to-line {
+      display: block;
+      width: 130px;
+      height: 1px;
+      margin: 6px auto 0;
+      background: linear-gradient(90deg, transparent, rgba(122, 59, 82, 0.5), transparent);
+    }
+
+    /* 烫金角花 */
+    .corner {
+      position: absolute;
+      width: 22px; height: 22px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner.tl { top: 5px; left: 5px; border-top: 2px solid #d4af37; border-left: 2px solid #d4af37; border-top-left-radius: 4px; }
+    .corner.tr { top: 5px; right: 5px; border-top: 2px solid #d4af37; border-right: 2px solid #d4af37; border-top-right-radius: 4px; }
+    .corner.bl { bottom: 5px; left: 5px; border-bottom: 2px solid #d4af37; border-left: 2px solid #d4af37; border-bottom-left-radius: 4px; }
+    .corner.br { bottom: 5px; right: 5px; border-bottom: 2px solid #d4af37; border-right: 2px solid #d4af37; border-bottom-right-radius: 4px; }
+    .corner::after {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 7px; height: 7px;
+      background: linear-gradient(135deg, #e8cd7e, #b8862f);
+      box-shadow: 0 0 5px rgba(212, 175, 55, 0.7);
+    }
+
+    /* 信封盖 */
+    .flap {
+      position: absolute;
+      top: 0; left: 0;
+      width: 0; height: 0;
+      border-left: 200px solid transparent;
+      border-right: 200px solid transparent;
+      border-top: 130px solid #e06080;
+      transform-origin: top center;
+      transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 4;
+      filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.2));
+    }
+
+    /* 火漆印章（立体蜡封） */
+    .seal {
+      position: absolute;
+      left: 50%; top: 47%;
+      transform: translate(-50%, -50%);
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, #ffb1c4 0%, #ff7e9d 28%, #e0436a 62%, #b82b4f 100%);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 30px;
+      text-shadow: 0 1px 3px rgba(150, 30, 60, 0.5);
+      box-shadow:
+        0 6px 14px rgba(0, 0, 0, 0.25),
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 -3px 8px rgba(120, 10, 40, 0.55),
+        inset 0 3px 6px rgba(255, 255, 255, 0.5);
+      transition: opacity 0.4s, transform 0.6s;
+    }
+    /* 蜡封内圈压痕 */
+    .seal::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      box-shadow: inset 0 1px 3px rgba(120, 10, 40, 0.4);
+      pointer-events: none;
+    }
+
+    /* 打开状态 */
+    .envelope.open .flap { transform: rotateX(180deg); }
+    .envelope.open .seal { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    .envelope { transition: transform 0.4s ease, opacity 0.5s ease; }
+    .envelope.open { animation: envelopeAway 0.8s ease 0.9s forwards; }
+    @keyframes envelopeAway {
+      to { transform: translateY(12px) scale(0.45); opacity: 0; }
+    }
+
+    /* ===== 信件内容 ===== */
+    .letter {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%) scale(0.4);
+      opacity: 0;
+      width: 560px;
+      max-width: 90vw;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      padding: 34px 40px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(255, 90, 120, 0.3);
+      border: 1px solid rgba(255, 140, 160, 0.3);
+      transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.7s ease;
+    }
+    .letter.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    .letter .title {
+      color: #d6517c;
+      font-size: 14px;
+      letter-spacing: 6px;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+    .letter .message {
+      color: #7a3b52;
+      font-size: 24px;
+      line-height: 1.6;
+      margin-bottom: 26px;
+      font-weight: 600;
+    }
+    .letter .result {
+      display: none;
+      color: #d6517c;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      animation: pop 0.5s ease;
+    }
+    .letter .result.show { display: block; }
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      60% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 36px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .btn-yes {
+      background: linear-gradient(135deg, #ff7e9d, #ff5a7a);
+      color: #fff;
+      font-size: 22px;
+      padding: 12px 40px;
+      box-shadow: 0 8px 24px rgba(255, 90, 122, 0.4);
+    }
+    .btn-yes:hover { transform: scale(1.05); }
+    .btn-no {
+      background: #f3e6ea;
+      color: #b07a8e;
+      font-size: 18px;
+      padding: 10px 30px;
+    }
+    .btn-no:hover { background: #ecd5dc; }
+
+    /* ===== 横竖屏适配 ===== */
+    @media (orientation: portrait) {
+      .rotate-hint { display: flex; }
+      .app { display: none; }
+    }
+    @media (orientation: landscape) {
+      .rotate-hint { display: none; }
+      .app { display: flex; }
+    }
+    /* 矮小横屏（手机横屏）压缩尺寸 */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .envelope { width: 320px; height: 208px; }
+      .flap { border-left: 160px solid transparent; border-right: 160px solid transparent; border-top: 104px solid #e06080; }
+      .envelope-body::before { border-left: 160px solid rgba(255,255,255,0.25); border-right: 160px solid rgba(255,255,255,0.15); border-bottom: 208px solid transparent; }
+      .letter .message { font-size: 20px; margin-bottom: 18px; }
+      .letter .result { font-size: 26px; }
+      .letter { padding: 22px 28px; }
+      .btn-yes { font-size: 19px; padding: 10px 32px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 竖屏：旋转提示 -->
+  <div class="rotate-hint">
+    <div class="rotate-icon"></div>
+    <p>请将手机旋转至<br />横屏观看</p>
+  </div>
+
+  <!-- 横屏：主舞台 -->
+  <div class="app">
+    <div class="stage">
+      <div class="envelope" id="envelope" onclick="openEnvelope()">
+        <div class="envelope-body"></div>
+        <div class="to-label">
+          <span class="to-name">致 赵文静</span>
+          <span class="to-line"></span>
+        </div>
+        <div class="flap"></div>
+        <div class="seal">❤</div>
+        <i class="corner tl"></i>
+        <i class="corner tr"></i>
+        <i class="corner bl"></i>
+        <i class="corner br"></i>
+      </div>
+
+      <div class="letter" id="letter">
+        <div class="title">— 邀 请 函 —</div>
+        <div class="message" id="message">亲爱的赵女士，你是否愿意与我共进晚餐？</div>
+        <div class="result" id="result">不 见 不 散 ❤</div>
+        <div class="buttons" id="buttons">
+          <button class="btn btn-yes" id="yesBtn" onclick="sayYes()">Yes</button>
+          <button class="btn btn-no" id="noBtn" onclick="sayNo()">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 飘落爱心
+    (function createHearts() {
+      const symbols = ['❤', '💗', '💕', '🌹', '✨'];
+      for (let i = 0; i < 20; i++) {
+        const h = document.createElement('span');
+        h.className = 'heart';
+        h.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        h.style.left = Math.random() * 100 + 'vw';
+        h.style.fontSize = (14 + Math.random() * 22) + 'px';
+        h.style.animationDuration = (6 + Math.random() * 8) + 's';
+        h.style.animationDelay = Math.random() * 8 + 's';
+        document.body.appendChild(h);
+      }
+    })();
+
+    // 尽力尝试锁定横屏（移动端部分浏览器 + 全屏 + 用户手势时生效）
+    function tryLockLandscape() {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(function () {});
+      }
+    }
+
+    let opened = false;
+    function openEnvelope() {
+      if (opened) return;
+      opened = true;
+      tryLockLandscape();
+      document.getElementById('envelope').classList.add('open');
+      setTimeout(function () {
+        document.getElementById('letter').classList.add('show');
+      }, 550);
+    }
+
+    let yesScale = 1;
+    function sayYes() {
+      document.getElementById('message').style.display = 'none';
+      document.getElementById('buttons').style.display = 'none';
+      document.getElementById('result').classList.add('show');
+    }
+    function sayNo() {
+      yesScale += 0.5;
+      document.getElementById('yesBtn').style.transform = 'scale(' + yesScale + ')';
+    }
+  </script>
+</body>
+</html>
